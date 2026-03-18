@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import time
+import json
 from dotenv import load_dotenv
 from groq import Groq
 from src.processor import process_pdf
@@ -8,6 +9,16 @@ from src.vector_store import create_vector_store, get_retriever
 from src.summarizer import generate_summary
 
 load_dotenv() 
+
+# --- UTILITY FUNCTIONS ---
+def save_chat_locally():
+    """Saves the current session state to a JSON file for persistence."""
+    if st.session_state.get("messages"):
+        # Ensure data directory exists
+        if not os.path.exists("data"):
+            os.makedirs("data")
+        with open("data/chat_backup.json", "w") as f:
+            json.dump(st.session_state.messages, f)
 
 # --- UI CONFIGURATION ---
 st.set_page_config(page_title="VelocityReader", page_icon="⚡", layout="wide")
@@ -64,7 +75,6 @@ with st.sidebar:
             
             with st.expander("📊 Document Summary", expanded=True):
                 with st.spinner("Generating summary..."):
-                    # Summarizing first few chunks for a quick overview
                     summary_text = generate_summary(all_chunks[:5])
                     st.markdown(summary_text)
                     st.info("💡 **Try asking:** 'What are the main risks?'")
@@ -74,14 +84,39 @@ with st.sidebar:
     st.info("Inference Engine: **Groq LPU™**")
     st.info("Model: **Llama-3.3-70B**")
     
-    # Download Chat History
+    # --- SESSION MANAGEMENT ---
+    st.divider()
+    st.subheader("💾 Session Management")
+    
     if st.session_state.get("messages"):
-        chat_text = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in st.session_state.messages])
-        st.download_button("💾 Export Chat", chat_text, file_name="research_notes.txt")
+        # Create a formatted Research Report string
+        report_content = f"RESEARCH REPORT - {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+        report_content += "="*40 + "\n\n"
+        for msg in st.session_state.messages:
+            role = "USER" if msg["role"] == "user" else "VELOCITY_READER"
+            report_content += f"[{role}]: {msg['content']}\n\n"
+
+        st.download_button(
+            label="📥 Download Research Report",
+            data=report_content,
+            file_name=f"research_report_{int(time.time())}.txt",
+            mime="text/plain"
+        )
+
+        if st.button("🗑️ Clear Chat History"):
+            st.session_state.messages = []
+            if os.path.exists("data/chat_backup.json"):
+                os.remove("data/chat_backup.json")
+            st.rerun()
 
 # --- CHAT INTERFACE ---
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    # Try to load from backup if it exists
+    if os.path.exists("data/chat_backup.json"):
+        with open("data/chat_backup.json", "r") as f:
+            st.session_state.messages = json.load(f)
+    else:
+        st.session_state.messages = []
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -129,3 +164,6 @@ if prompt := st.chat_input("Ask a question about your documents..."):
         st.caption(f"🚀 {duration}s | Sources: {', '.join(sources)}")
         
         st.session_state.messages.append({"role": "assistant", "content": full_response})
+        
+        # PERSISTENCE: Save after every assistant message
+        save_chat_locally()
