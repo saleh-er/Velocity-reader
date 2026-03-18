@@ -39,7 +39,7 @@ if prompt := st.chat_input("Ask about the PDF..."):
 
     # Search the PDF for context
     retriever = get_retriever()
-    docs = retriever.get_relevant_documents(prompt)
+    docs = retriever.invoke(prompt)
     context = "\n".join([doc.page_content for doc in docs])
 
     # Call Groq
