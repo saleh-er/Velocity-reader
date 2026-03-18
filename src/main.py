@@ -43,16 +43,23 @@ st.markdown("##### *Instant PDF Intelligence powered by Groq*")
 # --- SIDEBAR ---
 with st.sidebar:
     st.header("📂 Upload Document")
-    uploaded_file = st.file_uploader("Drop your PDF here", type="pdf")
+    uploaded_file = st.file_uploader("Uploade one or more PDFs to get started", type=["pdf"], accept_multiple_files=True)
     
     if uploaded_file:
-        with open("temp.pdf", "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        
-        with st.spinner("⚡ High-speed processing..."):
-            chunks = process_pdf("temp.pdf")
-            create_vector_store(chunks)
-            st.success("✅ Document Indexed!")
+        all_chunks = []
+        for uploaded_file in uploaded_file:
+            temp_path = f"temp_{uploaded_file.name}"
+            with open(temp_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            
+            with st.spinner(f"indexing {uploaded_file.name}..."):
+                chunks = process_pdf(temp_path)
+                all_chunks.extend(chunks)
+                # Clean up the temp file after processing
+                os.remove(temp_path)
+            if all_chunks:
+                create_vector_store(all_chunks)
+                st.success(f"✅ {len(uploaded_file)} documents indexed!")
 
     st.divider()
     st.subheader("🚀 Performance Stats")
