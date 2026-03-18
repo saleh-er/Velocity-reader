@@ -58,8 +58,16 @@ with st.sidebar:
                 # Clean up the temp file after processing
                 os.remove(temp_path)
             if all_chunks:
-                create_vector_store(all_chunks)
-                st.success(f"✅ {len(uploaded_files)} documents indexed!")
+            create_vector_store(all_chunks)
+            st.success(f"✅ {len(uploaded_files)} documents indexed!")
+            
+            # This line must be indented with 8 spaces (aligned with st.success)
+            with st.expander("📊 Document Summary", expanded=True):
+                with st.spinner("Generating summary..."):
+                    summary_text = generate_summary(all_chunks[:5])
+                    st.markdown(summary_text)
+                    st.info("💡 **Try asking:** 'What are the main risks?'")
+
 
     st.divider()
     st.subheader("🚀 Performance Stats")
