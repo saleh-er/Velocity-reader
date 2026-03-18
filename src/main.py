@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from groq import Groq
 from processor import process_pdf
 from vector_store import create_vector_store, get_retriever
+from summarizer import generate_summary
 
 load_dotenv() 
 
@@ -55,11 +56,11 @@ with st.sidebar:
             with st.spinner(f"indexing {uploaded_file.name}..."):
                 chunks = process_pdf(temp_path)
                 all_chunks.extend(chunks)
-                # Clean up the temp file after processing
+                # Clean up the temp file after processclsing
                 os.remove(temp_path)
             if all_chunks:
-            create_vector_store(all_chunks)
-            st.success(f"✅ {len(uploaded_files)} documents indexed!")
+             create_vector_store(all_chunks)
+             st.success(f"✅ {len(uploaded_files)} documents indexed!")
             
             # This line must be indented with 8 spaces (aligned with st.success)
             with st.expander("📊 Document Summary", expanded=True):
