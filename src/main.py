@@ -2,8 +2,8 @@ import streamlit as st
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from processor import process_pdf
-from vector_store import create_vector_store, get_retriever
+from src.processor import process_pdf
+from src.vector_store import create_vector_store, get_retriever
 
 load_dotenv() # Load your API Key from .env
 
