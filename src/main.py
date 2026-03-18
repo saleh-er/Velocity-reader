@@ -59,7 +59,7 @@ with st.sidebar:
                 os.remove(temp_path)
             if all_chunks:
                 create_vector_store(all_chunks)
-                st.success(f"✅ {len(uploaded_file)} documents indexed!")
+                st.success(f"✅ {len(uploaded_files)} documents indexed!")
 
     st.divider()
     st.subheader("🚀 Performance Stats")
