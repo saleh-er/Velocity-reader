@@ -1,5 +1,6 @@
 groq
 langchain
+langchain-text-splitters
 langchain-community
 langchain-groq
 pypdf
