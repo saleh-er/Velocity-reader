@@ -1,6 +1,6 @@
 import os
 from groq import Groq
-from langchain.chains.summarize import load_summarize_chain
+from langchain_community.chains.summarize import load_summarize_chain
 from langchain_groq import ChatGroq
 
 def generate_summary(chunks):
