@@ -1,38 +1,75 @@
 import streamlit as st
 import os
+import time
 from dotenv import load_dotenv
 from groq import Groq
 from processor import process_pdf
 from vector_store import create_vector_store, get_retriever
 
-load_dotenv() # Load your API Key from .env
+load_dotenv() 
 
-st.set_page_config(page_title="VelocityReader", page_icon="⚡")
-st.title("⚡ VelocityReader: Instant PDF Chat")
+# --- UI CONFIGURATION ---
+st.set_page_config(page_title="VelocityReader", page_icon="⚡", layout="wide")
 
-# Sidebar for PDF Upload
+# Custom CSS for a modern look
+st.markdown("""
+    <style>
+    .main {
+        background-color: #f8f9fa;
+    }
+    .stChatMessage {
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid #e0e0e0;
+        background-color: white !important;
+    }
+    [data-testid="stSidebar"] {
+        background-color: #ffffff;
+        border-right: 1px solid #eee;
+    }
+    .stHeader {
+        background: linear-gradient(90deg, #FF4B4B, #FF8F8F);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+st.title("⚡ VelocityReader")
+st.markdown("##### *Instant PDF Intelligence powered by Groq*")
+
+# --- SIDEBAR ---
 with st.sidebar:
-    st.header("Upload Document")
-    uploaded_file = st.file_uploader("Choose a PDF", type="pdf")
+    st.header("📂 Upload Document")
+    uploaded_file = st.file_uploader("Drop your PDF here", type="pdf")
     
     if uploaded_file:
         with open("temp.pdf", "wb") as f:
             f.write(uploaded_file.getbuffer())
         
-        with st.spinner("Processing PDF..."):
+        with st.spinner("⚡ High-speed processing..."):
             chunks = process_pdf("temp.pdf")
             create_vector_store(chunks)
-            st.success("Ready to Chat!")
+            st.success("✅ Document Indexed!")
 
-# Chat Interface
+    st.divider()
+    st.subheader("🚀 Performance Stats")
+    # Placeholder metrics to show off the 'Velocity' branding
+    st.info("Inference Engine: **Groq LPU™**")
+    st.info("Model: **Llama-3.3-70B**")
+
+# --- CHAT INTERFACE ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Display chat history
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if prompt := st.chat_input("Ask about the PDF..."):
+if prompt := st.chat_input("Ask a question about your document..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -49,10 +86,13 @@ if prompt := st.chat_input("Ask about the PDF..."):
         response_placeholder = st.empty()
         full_response = ""
         
+        # Start timer for speed metrics
+        start_time = time.time()
+        
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": f"Use this context to answer: {context}"},
+                {"role": "system", "content": f"You are a helpful assistant. Use this context to answer: {context}"},
                 {"role": "user", "content": prompt}
             ],
             stream=True
@@ -64,4 +104,10 @@ if prompt := st.chat_input("Ask about the PDF..."):
                 response_placeholder.markdown(full_response + "▌")
         
         response_placeholder.markdown(full_response)
+        
+        # Calculate time taken for that "Wow" factor
+        end_time = time.time()
+        duration = round(end_time - start_time, 2)
+        st.caption(f"Generated in {duration}s using Groq Cloud")
+        
         st.session_state.messages.append({"role": "assistant", "content": full_response})
