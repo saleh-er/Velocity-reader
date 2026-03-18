@@ -43,11 +43,11 @@ st.markdown("##### *Instant PDF Intelligence powered by Groq*")
 # --- SIDEBAR ---
 with st.sidebar:
     st.header("📂 Upload Document")
-    uploaded_file = st.file_uploader("Uploade one or more PDFs to get started", type=["pdf"], accept_multiple_files=True)
+    uploaded_files = st.file_uploader("Uploade one or more PDFs to get started", type=["pdf"], accept_multiple_files=True)
     
-    if uploaded_file:
+    if uploaded_files:
         all_chunks = []
-        for uploaded_file in uploaded_file:
+        for uploaded_file in uploaded_files:
             temp_path = f"temp_{uploaded_file.name}"
             with open(temp_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
