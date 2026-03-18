@@ -1,9 +1,8 @@
 groq
 langchain
-langchain-text-splitters
 langchain-community
+langchain-text-splitters
 langchain-groq
-langchain-summarize
 pypdf
 chromadb
 sentence-transformers
