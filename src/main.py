@@ -3,9 +3,9 @@ import os
 import time
 from dotenv import load_dotenv
 from groq import Groq
-from processor import process_pdf
-from vector_store import create_vector_store, get_retriever
-from summarizer import generate_summary
+from src.processor import process_pdf
+from src.vector_store import create_vector_store, get_retriever
+from src.summarizer import generate_summary
 
 load_dotenv() 
 
@@ -43,8 +43,8 @@ st.markdown("##### *Instant PDF Intelligence powered by Groq*")
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.header("📂 Upload Document")
-    uploaded_files = st.file_uploader("Uploade one or more PDFs to get started", type=["pdf"], accept_multiple_files=True)
+    st.header("📂 Upload Documents")
+    uploaded_files = st.file_uploader("Upload one or more PDFs to get started", type=["pdf"], accept_multiple_files=True)
     
     if uploaded_files:
         all_chunks = []
@@ -53,62 +53,65 @@ with st.sidebar:
             with open(temp_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
             
-            with st.spinner(f"indexing {uploaded_file.name}..."):
+            with st.spinner(f"Indexing {uploaded_file.name}..."):
                 chunks = process_pdf(temp_path)
                 all_chunks.extend(chunks)
-                # Clean up the temp file after processclsing
                 os.remove(temp_path)
-            if all_chunks:
-             create_vector_store(all_chunks)
-             st.success(f"✅ {len(uploaded_files)} documents indexed!")
+        
+        if all_chunks:
+            create_vector_store(all_chunks)
+            st.success(f"✅ {len(uploaded_files)} documents indexed!")
             
-            # This line must be indented with 8 spaces (aligned with st.success)
             with st.expander("📊 Document Summary", expanded=True):
                 with st.spinner("Generating summary..."):
+                    # Summarizing first few chunks for a quick overview
                     summary_text = generate_summary(all_chunks[:5])
                     st.markdown(summary_text)
                     st.info("💡 **Try asking:** 'What are the main risks?'")
 
-
     st.divider()
     st.subheader("🚀 Performance Stats")
-    # Placeholder metrics to show off the 'Velocity' branding
     st.info("Inference Engine: **Groq LPU™**")
     st.info("Model: **Llama-3.3-70B**")
+    
+    # Download Chat History
+    if st.session_state.get("messages"):
+        chat_text = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in st.session_state.messages])
+        st.download_button("💾 Export Chat", chat_text, file_name="research_notes.txt")
 
 # --- CHAT INTERFACE ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display chat history
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if prompt := st.chat_input("Ask a question about your document..."):
+if prompt := st.chat_input("Ask a question about your documents..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Search the PDF for context
+    # 1. Search PDFs for context
     retriever = get_retriever()
     docs = retriever.invoke(prompt)
     context = "\n".join([doc.page_content for doc in docs])
+    
+    # 2. Extract Citations
+    sources = list({f"📄 {doc.metadata.get('source_file', 'Unknown')} (Pg. {doc.metadata.get('page', 0) + 1})" for doc in docs})
 
-    # Call Groq
+    # 3. Call Groq
     client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     
     with st.chat_message("assistant"):
         response_placeholder = st.empty()
         full_response = ""
-        
-        # Start timer for speed metrics
         start_time = time.time()
         
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": f"You are a helpful assistant. Use this context to answer: {context}"},
+                {"role": "system", "content": f"Answer based on this context: {context}"},
                 {"role": "user", "content": prompt}
             ],
             stream=True
@@ -121,9 +124,8 @@ if prompt := st.chat_input("Ask a question about your document..."):
         
         response_placeholder.markdown(full_response)
         
-        # Calculate time taken for that "Wow" factor
-        end_time = time.time()
-        duration = round(end_time - start_time, 2)
-        st.caption(f"Generated in {duration}s using Groq Cloud")
+        # Display Sources and Speed
+        duration = round(time.time() - start_time, 2)
+        st.caption(f"🚀 {duration}s | Sources: {', '.join(sources)}")
         
         st.session_state.messages.append({"role": "assistant", "content": full_response})
